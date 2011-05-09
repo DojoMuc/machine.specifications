@@ -14,26 +14,12 @@ namespace Machine.Specifications
     {
       Type type = typeof(T);
 
+
       // Enumerable?
-      IEnumerable enumerableX = x as IEnumerable;
-      IEnumerable enumerableY = y as IEnumerable;
-
-      if (enumerableX != null && enumerableY != null)
+      bool areBothEnumerable = CanCompareEnumerable(x, y);
+      if (areBothEnumerable)
       {
-        IEnumerator enumeratorX = enumerableX.GetEnumerator();
-        IEnumerator enumeratorY = enumerableY.GetEnumerator();
-
-        while (true)
-        {
-          bool hasNextX = enumeratorX.MoveNext();
-          bool hasNextY = enumeratorY.MoveNext();
-
-          if (!hasNextX || !hasNextY)
-            return (hasNextX == hasNextY ? 0 : -1);
-
-          if (!object.Equals(enumeratorX.Current, enumeratorY.Current))
-            return -1;
-        }
+          return CompareEnumerable((IEnumerable)x, (IEnumerable)y);
       }
 
       // Null?
@@ -76,7 +62,33 @@ namespace Machine.Specifications
       return object.Equals(x, y) ? 0 : -1;
     }
 
-    public bool Equals(T x, T y)
+      bool CanCompareEnumerable(T x, T y)
+      {
+          IEnumerable enumerableX = x as IEnumerable;
+          IEnumerable enumerableY = y as IEnumerable;
+
+          return enumerableX != null && enumerableY != null;
+      }
+
+      int CompareEnumerable(IEnumerable enumerableX, IEnumerable enumerableY)
+      {
+          IEnumerator enumeratorX = enumerableX.GetEnumerator();
+          IEnumerator enumeratorY = enumerableY.GetEnumerator();
+
+          while (true)
+          {
+              bool hasNextX = enumeratorX.MoveNext();
+              bool hasNextY = enumeratorY.MoveNext();
+
+              if (!hasNextX || !hasNextY)
+                  return (hasNextX == hasNextY ? 0 : -1);
+
+              if (!object.Equals(enumeratorX.Current, enumeratorY.Current))
+                  return -1;
+          }
+      }
+
+      public bool Equals(T x, T y)
     {
       return Compare(x, y) == 0;
     }
