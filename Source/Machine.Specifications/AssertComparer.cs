@@ -15,16 +15,8 @@ namespace Machine.Specifications
         if (CanCompareEnumerable(x, y))
             return CompareEnumerable((IEnumerable)x, (IEnumerable)y);
         
-        Type type = typeof(T);
-
-      // Null?
-      if (!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(Nullable<>))))
-      {
-          if (!AreBothNotNull(x, y))
-          {
-              return CompareNull(x, y);
-          }
-      }
+      if (IsReferenceOrNullableType<T>() && IsAnyNull(x, y))
+        return CompareNull(x, y);
 
       // Same type?
       if (x.GetType() != y.GetType())
@@ -52,6 +44,12 @@ namespace Machine.Specifications
       return object.Equals(x, y) ? 0 : -1;
     }
 
+      bool IsReferenceOrNullableType<T>()
+      {
+          Type type = typeof(T);
+          return !type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(Nullable<>)));
+      }
+
       int CompareNull(T x, T y)
       {
           if (object.Equals(x, default(T)))
@@ -67,9 +65,9 @@ namespace Machine.Specifications
           throw new NotSupportedException();
       }
 
-      bool AreBothNotNull(T x, T y)
+      bool IsAnyNull(T x, T y)
       {
-          return !object.Equals(x, default(T)) && !object.Equals(y, default(T));
+          return object.Equals(x, default(T)) || object.Equals(y, default(T));
       }
 
       bool CanCompareEnumerable(T x, T y)
