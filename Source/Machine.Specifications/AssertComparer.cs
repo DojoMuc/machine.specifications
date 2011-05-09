@@ -12,28 +12,18 @@ namespace Machine.Specifications
     public int Compare(T x,
                        T y)
     {
-      Type type = typeof(T);
-
-
-      // Enumerable?
-      bool areBothEnumerable = CanCompareEnumerable(x, y);
-      if (areBothEnumerable)
-      {
-          return CompareEnumerable((IEnumerable)x, (IEnumerable)y);
-      }
+        if (CanCompareEnumerable(x, y))
+            return CompareEnumerable((IEnumerable)x, (IEnumerable)y);
+        
+        Type type = typeof(T);
 
       // Null?
       if (!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(Nullable<>))))
       {
-        if (object.Equals(x, default(T)))
-        {
-          if (object.Equals(y, default(T)))
-            return 0;
-          return -1;
-        }
-
-        if (object.Equals(y, default(T)))
-          return -1;
+          if (!AreBothNotNull(x, y))
+          {
+              return CompareNull(x, y);
+          }
       }
 
       // Same type?
@@ -61,6 +51,26 @@ namespace Machine.Specifications
       // Last case, rely on Object.Equals
       return object.Equals(x, y) ? 0 : -1;
     }
+
+      int CompareNull(T x, T y)
+      {
+          if (object.Equals(x, default(T)))
+          {
+              if (object.Equals(y, default(T)))
+                  return 0;
+              return -1;
+          }
+
+          if (object.Equals(y, default(T)))
+              return -1;
+
+          throw new NotSupportedException();
+      }
+
+      bool AreBothNotNull(T x, T y)
+      {
+          return !object.Equals(x, default(T)) && !object.Equals(y, default(T));
+      }
 
       bool CanCompareEnumerable(T x, T y)
       {
