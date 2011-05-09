@@ -9,20 +9,23 @@ namespace Machine.Specifications
   // Borrowed from XUnit, licened under MS-PL
   class AssertComparer<T> : IComparer<T>, IEqualityComparer<T>
   {
-    public int Compare(T x,
-                       T y)
+    public int Compare(T x, T y)
     {
-        if (CanCompareEnumerable(x, y))
-            return CompareEnumerable((IEnumerable)x, (IEnumerable)y);
+        var enumerableComparer = new EnumerableComparer();
+
+        if (enumerableComparer.CanCompare(x, y))
+            return enumerableComparer.Compare((IEnumerable)x, (IEnumerable)y);
         
-      if (IsReferenceOrNullableType<T>() && IsAnyNull(x, y))
-        return CompareNull(x, y);
+        var nullComparer = new NullComparer();
+
+      if (nullComparer.CanCompare(x, y))
+        return nullComparer.Compare(x, y);
 
       // Same type?
       if (x.GetType() != y.GetType())
-        return -1;
+          return -1;
 
-      // Implements IComparable<T>?
+        // Implements IComparable<T>?
       IComparable<T> comparable1 = x as IComparable<T>;
 
       if (comparable1 != null)
@@ -44,55 +47,66 @@ namespace Machine.Specifications
       return object.Equals(x, y) ? 0 : -1;
     }
 
-      bool IsReferenceOrNullableType<T>()
-      {
-          Type type = typeof(T);
-          return !type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(Nullable<>)));
-      }
+    class NullComparer
+    {
+        public int Compare(T x, T y)
+        {
+            if (object.Equals(x, default(T)))
+            {
+                if (object.Equals(y, default(T)))
+                    return 0;
+                return -1;
+            }
 
-      int CompareNull(T x, T y)
+            if (object.Equals(y, default(T)))
+                return -1;
+
+            throw new NotSupportedException();
+        }
+
+        public bool CanCompare(T x, T y)
+        {
+            return IsReferenceOrNullableType<T>() && IsAnyNull(x, y);
+        }
+
+        bool IsAnyNull(T x, T y)
+        {
+            return object.Equals(x, default(T)) || object.Equals(y, default(T));
+        }
+
+        bool IsReferenceOrNullableType<T>()
+        {
+            Type type = typeof(T);
+            return !type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(typeof(Nullable<>)));
+        }
+    }
+
+      public class EnumerableComparer
       {
-          if (object.Equals(x, default(T)))
+          public bool CanCompare(T x, T y)
           {
-              if (object.Equals(y, default(T)))
-                  return 0;
-              return -1;
+              IEnumerable enumerableX = x as IEnumerable;
+              IEnumerable enumerableY = y as IEnumerable;
+
+              return enumerableX != null && enumerableY != null;
           }
 
-          if (object.Equals(y, default(T)))
-              return -1;
-
-          throw new NotSupportedException();
-      }
-
-      bool IsAnyNull(T x, T y)
-      {
-          return object.Equals(x, default(T)) || object.Equals(y, default(T));
-      }
-
-      bool CanCompareEnumerable(T x, T y)
-      {
-          IEnumerable enumerableX = x as IEnumerable;
-          IEnumerable enumerableY = y as IEnumerable;
-
-          return enumerableX != null && enumerableY != null;
-      }
-
-      int CompareEnumerable(IEnumerable enumerableX, IEnumerable enumerableY)
-      {
-          IEnumerator enumeratorX = enumerableX.GetEnumerator();
-          IEnumerator enumeratorY = enumerableY.GetEnumerator();
-
-          while (true)
+          public int Compare(IEnumerable enumerableX, IEnumerable enumerableY)
           {
-              bool hasNextX = enumeratorX.MoveNext();
-              bool hasNextY = enumeratorY.MoveNext();
+              IEnumerator enumeratorX = enumerableX.GetEnumerator();
+              IEnumerator enumeratorY = enumerableY.GetEnumerator();
 
-              if (!hasNextX || !hasNextY)
-                  return (hasNextX == hasNextY ? 0 : -1);
+              while (true)
+              {
+                  bool hasNextX = enumeratorX.MoveNext();
+                  bool hasNextY = enumeratorY.MoveNext();
 
-              if (!object.Equals(enumeratorX.Current, enumeratorY.Current))
-                  return -1;
+                  if (!hasNextX || !hasNextY)
+                      return (hasNextX == hasNextY ? 0 : -1);
+
+                  if (!object.Equals(enumeratorX.Current, enumeratorY.Current))
+                      return -1;
+              }
           }
       }
 
